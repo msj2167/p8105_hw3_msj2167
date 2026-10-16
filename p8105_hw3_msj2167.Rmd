@@ -45,7 +45,7 @@ nhanes_accel =
 nhanes_accel
 ```
 
-Loading and cleaning the participants’ demographic data
+Loading and cleaning the participants' demographic data
 
 ```{r}
 nhanes_demo =
@@ -75,4 +75,34 @@ nhanes_demo =
 
 nhanes_demo
 ```
+
+Merging the datasets 
+
+```{r}
+nhanes_combined_df = 
+  left_join(nhanes_demo, nhanes_accel, by = "seqn")
+
+nhanes_combined_df
+```
+
+Making a table for the number of men and women in each education category
+
+```{r}
+nhanes_demo |>
+  group_by(education) |>
+  summarize(
+    male = sum(sex == "male"),
+    female = sum(sex == "female")) |>
+  knitr::kable(col.names = c("Education", "Men", "Women"))
+```
+
+Visualizing the age distributions for men and women in each education category
+
+```{r}
+nhanes_demo |>
+  ggplot(aes(x = sex, y = age, fill = sex)) +
+  geom_boxplot() +
+  facet_grid(. ~ education)
+```
+
 
