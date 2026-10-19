@@ -29,7 +29,7 @@ scale_fill_discrete = scale_fill_viridis_d
 Loading and cleaning the accelerometer dataset 
 
 ```{r}
-nhanes_accel =
+nhanes_accel_df =
   read_csv(
     file = "data/nhanes_accel.csv",
     na = c("", "NA", ".")) |>
@@ -41,14 +41,12 @@ nhanes_accel =
     values_to = "mims") |>
       mutate (
       minute = as.numeric(minute))
-
-nhanes_accel
 ```
 
 Loading and cleaning the participants' demographic data
 
 ```{r}
-nhanes_demo =
+nhanes_demo_df =
   read_csv(
     file = "data/nhanes_covar.csv",
     skip = 4, 
@@ -72,23 +70,19 @@ nhanes_demo =
   filter (
     age >= 21) |>
     drop_na()
-
-nhanes_demo
 ```
 
 Merging the datasets 
 
 ```{r}
 nhanes_combined_df = 
-  left_join(nhanes_demo, nhanes_accel, by = "seqn")
-
-nhanes_combined_df
+  left_join(nhanes_demo_df, nhanes_accel_df, by = "seqn")
 ```
 
-Making a table for the number of men and women in each education category
+### Making a table for the number of men and women in each education category
 
 ```{r}
-nhanes_demo |>
+nhanes_demo_df |>
   group_by(education) |>
   summarize(
     male = sum(sex == "male"),
@@ -97,10 +91,10 @@ nhanes_demo |>
    knitr::kable(col.names = c("Education", "Men", "Women", "Total"))
 ```
 
-Visualizing the age distributions for men and women in each education category
+### Visualizing the age distributions for men and women in each education category
 
 ```{r}
-nhanes_demo |>
+nhanes_demo_df |>
   ggplot(aes(x = sex, y = age, fill = sex)) +
   geom_boxplot() +
   facet_grid(. ~ education)
@@ -117,16 +111,15 @@ nhanes_summed_mims =
   nhanes_combined_df |>
   group_by(seqn, sex, age, education) |>
   summarize(total_activity = sum(mims), .groups = "drop")
-
-nhanes_summed_mims
 ```
 
+##  Plotting total activities (y-axis) against age (x-axis), comparing men and women across education levels
 
 ```{r}
 nhanes_summed_mims |>
   ggplot(aes(x = age, y = total_activity, color = sex)) +
-  geom_point(alpha = .3) +
-  geom_smooth(se = FALSE) +
+  geom_point(alpha = .5) +
+  geom_smooth() +
   facet_grid(. ~ education) +
   scale_colour_hue(h = c(100, 300)) +
   labs(
@@ -140,31 +133,13 @@ Plot Description:
 
 Total daily activity generally declines with age, though the pattern differs by sex and education level. Among participants with less than a high school education, activity declines most steeply, from about 18,500 MIMS for women and 17,000 MIMS for men in their 20s to about 9,000 MIMS for both sexes by age 80. Women in this group are more active than men until about age 40, after which men are more active, rising from age 50 to a peak at 60 before declining again. In the high school equivalent group, women are more active than men through most of adulthood; activity rises for both sexes to a peak around age 40, then declines steadily, with a smaller second peak for women around age 70. Among participants with more than a high school education, activity is the most stable, remaining fairly level until about age 45 for men and age 60 for women before declining, and women are more active than men at nearly all ages. 
 
-```{r}
-nhanes_combined_df |>
-  ggplot(aes(x = minute, y = mims, color = sex)) +
-  geom_smooth(se = FALSE) +
-  facet_grid(. ~ education) +
-  scale_x_continuous(
-    breaks = c(0, 360, 720, 1080, 1440),
-    labels = c("12am", "6am", "12pm", "6pm", "12am")) +
-  scale_colour_hue(h = c(100, 300)) +
-  labs(
-    title = "Smoothed 24-Hour Activity by Education Level",
-    x = "Time of Day",
-    y = "Activity (MIMS)",
-    color = "Sex",
-    caption = "Data from NHANES accelerometer study.") +
-  theme(panel.spacing = unit(1.5, "lines"))
-```
-
-
+## 24-hour activity time courses for each education level, for both sexes 
 
 ```{r}
 nhanes_combined_df |>
   ggplot(aes(x = minute, y = mims, color = sex)) +
   geom_line(aes(group = seqn), alpha = 0.2) +
-  geom_smooth(se = FALSE, linewidth = 0.3) +
+  geom_smooth(se = FALSE, linewidth = 0.5) +
   facet_grid(. ~ education) +
   scale_x_continuous(
     breaks = c(0, 360, 720, 1080, 1440),
@@ -179,6 +154,7 @@ nhanes_combined_df |>
     legend.position = "bottom",
     panel.spacing = unit(1.5, "lines"))
 ```
+
 A.I Disclosure: used AI to figure out how to get my labels to stop overlapping (line X).
 
 Plot Description: 
@@ -187,5 +163,120 @@ The timing of daily activity is similar across education levels and sexes, with 
 
 ## Problem 3
 
+Importing citi bike data
+
+```{r}
+citi_jan_2020_df =
+  read_csv(
+    file = "data/Jan 2020 Citi.csv",
+    na = c("", "NA", ".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2020, month = "January")
+
+citi_july_2020_df = 
+  read_csv(
+    file = "data/July 2020 Citi.csv",
+    na = c("", "NA", ".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2020, month = "July")
+
+citi_jan_2024_df = 
+  read_csv(
+    file = "data/Jan 2024 Citi.csv",
+    na = c("", "NA", ".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024, month = "January")
+
+citi_july_2024_df = 
+  read_csv(
+    file = "data/July 2024 Citi.csv",
+    na = c("", "NA", ".")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024, month = "July")
+```
+
+Combining the data sets
+
+```{r}
+citi_combined_df = bind_rows(citi_jan_2020_df, citi_july_2020_df, citi_jan_2024_df, citi_july_2024_df ) |>
+  mutate(
+    weekdays = factor(weekdays, levels = c( 
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+    month = factor(month, levels = c("January", "July")),
+    rideable_type = as.factor(rideable_type), 
+    member_casual = as.factor(member_casual)
+  ) |>
+  relocate(year, month) 
+```
+
+Description of the data set: 
+
+The combined dataset contains `r nrow(citi_combined_df)` rides and `r ncol(citi_combined_df)` variables, drawn from 1% of all rides under 4 hours in January and July of 2020 and 2024. Variables include `r names(citi_combined_df)`. The four monthly files were combined, year and month variables were added to identify each file, and day of week, month, bike type, and membership status were converted to factors, with day of week and month ordered chronologically.
+
+### Total number of rides in each combination of year and month, differentiating by Citi Bike members and casual riders. 
+
+```{r}
+citi_combined_df |>
+  count(year, month, member_casual) |>
+  pivot_wider(
+    names_from = member_casual,
+    values_from = n ) |>
+  knitr::kable(col.names = c("Year", "Month", "Casual Rider", "Citi Bike Member"))
+```
+Citi Bike members took more rides than casual riders in every combination of month and year. In both years, ridership was much higher in July than in January. Rides by casual riders rose from 984 to 5,637 between January and July 2020, and from 2,108 to 10,894 in 2024. Rides by members rose from 11,436 to 15,411 between January and July 2020, and more than doubled, from 16,753 to 36,262, in 2024. Overall, the number of rides grew substantially from 2020 to 2024.
+
+### 5 Most Popular Starting Stations 
+
+```{r}
+citi_july_2024_df |>
+  count(start_station_name) |>
+  arrange(desc(n)) |>
+  head(5) |>
+  knitr::kable(col.names = c("Starting Station", "Number of Rides"))
+```
+
+#### Investigating the effects of day of the week, month, and year on median ride duration
+
+```{r message=FALSE}
+citi_combined_df |>
+  group_by(year, month, weekdays) |>
+  summarize(median_duration = median(duration)) |>
+  ggplot(aes(x = weekdays, y = median_duration, color = month, group = month)) +
+  geom_point() + 
+  geom_line() + 
+  facet_grid(. ~ year) +
+    labs(
+      title = "Median ride duration by day of week, month, and year",
+      x = "Day of week",
+      y = "Median ride duration (minutes)",
+      color = "Month"
+    ) +
+  scale_x_discrete(labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+```
+
+The median ride duration varies by month, year, and day of the week. In both years, rides in July were longer than rides in January, and rides in 2020 were noticeably longer than rides in 2024. In 2020, July medians were about 13.5–14 minutes on weekdays and rose to about 16.5 minutes on weekends, while January medians were about 8.5 minutes on weekdays and about 10 minutes on weekends. In 2024, durations were much shorter and the difference between the two months was smaller: July medians were about 9 to 11 minutes, and January medians were about 7.4 to 8.3 minutes. Weekend rides were typically longer than weekday rides, with the exception of Sundays in January 2024, when the median ride duration was among the lowest of the week.
+
+### The impact of month, membership status, and bike type on the distribution of ride duration in 2024.
+
+```{r}
+citi_combined_df |>
+  filter(year == 2024) |>
+  mutate(
+    rideable_type = factor(
+      rideable_type,
+      levels = c("classic_bike", "electric_bike"),
+      labels = c("Classic", "Electric"))) |>
+  ggplot(aes(x = rideable_type, y = duration, fill = member_casual)) +
+  geom_boxplot() +
+  facet_grid(. ~ month) +
+  scale_y_continuous(trans = "log10") +
+  labs(
+    title = "Ride duration by month, membership status, and bike type (2024)",
+    x = "Bike type",
+    y = "Ride duration (minutes, log scale)",
+    fill = "Membership")
+```
+
+In 2024, casual riders took longer rides than members for both bike types in both months. The biggest difference was for classic bikes, where casual riders had a median ride of about 12.5 minutes in January and 15.5 minutes in July, compared with about 7.5 minutes for members in both months. Casual riders generally took shorter rides on electric bikes than on classic bikes, while members had similar ride durations for both bike types in January and slightly longer electric bike rides in July. Rides were generally longer in July than in January, especially for casual riders.
 
 
