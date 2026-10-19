@@ -97,7 +97,12 @@ nhanes_demo_df |>
 nhanes_demo_df |>
   ggplot(aes(x = sex, y = age, fill = sex)) +
   geom_boxplot() +
-  facet_grid(. ~ education)
+  facet_grid(. ~ education) +
+  labs(
+    title = "Age distributions for men and women in each education category",
+      x = "Sex",
+    y = "Age (years)"
+  )
 ```
 
 Description of the data: 
